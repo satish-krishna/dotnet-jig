@@ -1,0 +1,12 @@
+# The layer map. Patterns are wildcarded on the product prefix, so this file is
+# correct in every clone of the template with no rename step. Matching is on
+# namespace segment boundaries: "*.Api" covers Jig.Api and Jig.Api.Users, and does
+# not cover the global namespace where top-level statements put Program.
+#
+# Changing this file is a law change. It is reviewed as one. See ADR 0009.
+#
+# from            -> forbidden
+*.Domain          -> *.Application
+*.Domain          -> *.Infrastructure
+*.Application     -> *.Infrastructure
+*.Api             -> *.Infrastructure

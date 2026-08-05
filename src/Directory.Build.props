@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    The layer analyzer is wired here, in one place every project under src/ inherits,
+    and not in any single .csproj. A ProjectReference in a project file is a few lines
+    of XML anyone can delete to switch off every rule at once; wiring it here means the
+    only way to disable the rules shows up in a diff as exactly what it is. The analyzer
+    reads ArchLayers.txt, so the layer map travels with the code as an AdditionalFile.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\tools\analyzers\Jig.Analyzers\Jig.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)..\tools\analyzers\Jig.Analyzers\ArchLayers.txt" />
+  </ItemGroup>
+
+</Project>

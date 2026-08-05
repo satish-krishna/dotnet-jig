@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jig.Api/Jig.Api.csproj" />
+    <Project Path="src/Jig.Application/Jig.Application.csproj" />
+    <Project Path="src/Jig.Domain/Jig.Domain.csproj" />
+    <Project Path="src/Jig.Infrastructure/Jig.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jig.Application.Tests/Jig.Application.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/" />
+  <Folder Name="/tools/analyzers/">
+    <Project Path="tools/analyzers/Jig.Analyzers/Jig.Analyzers.csproj" />
+  </Folder>
+</Solution>

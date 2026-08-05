@@ -6,4 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Jig.Application\Jig.Application.csproj" />
+    <ProjectReference Include="..\Jig.Infrastructure\Jig.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+  </ItemGroup>
+
 </Project>
