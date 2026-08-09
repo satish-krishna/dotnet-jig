@@ -133,6 +133,42 @@ public readonly struct LayerRule
 
         return true;
     }
+
+    /// <summary>
+    /// The module a namespace belongs to: the segment immediately after a "Modules" segment
+    /// (e.g. "Users" for "Jig.Modules.Users.Application" or "Jig.Modules.Users.Contracts"), or
+    /// null when the namespace has no "Modules" segment (e.g. "Jig.SharedKernel", "Jig.Host") —
+    /// such a namespace belongs to no module and DR0002 never applies to it. Only the first
+    /// "Modules" segment counts; there is no expectation of a second one.
+    /// </summary>
+    public static string? ModuleOf(string ns)
+    {
+        var segments = ns.Split('.');
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            if (segments[i] == "Modules") return segments[i + 1];
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// True when <paramref name="ns"/> is module <paramref name="module"/>'s public Contracts
+    /// namespace ("*.Modules.&lt;module&gt;.Contracts") or nested under it
+    /// ("*.Modules.&lt;module&gt;.Contracts.Sub"). This is the one door DR0002 leaves open for a
+    /// cross-module reference.
+    /// </summary>
+    public static bool IsContractsOf(string ns, string module)
+    {
+        var segments = ns.Split('.');
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            if (segments[i] != "Modules" || segments[i + 1] != module) continue;
+            return segments.Length > i + 2 && segments[i + 2] == "Contracts";
+        }
+
+        return false;
+    }
 }
 
 /// <summary>A line of ArchLayers.txt that is non-blank, non-comment, and did not parse as a rule.</summary>

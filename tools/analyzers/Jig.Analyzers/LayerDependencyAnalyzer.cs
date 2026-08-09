@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -56,8 +57,20 @@ public sealed class LayerDependencyAnalyzer : DiagnosticAnalyzer
         description: "A line that fails to parse as a rule must fail the build, not vanish silently — a check that stays green because a typo quietly deleted a rule is paperwork. Fix the line in ArchLayers.txt.",
         customTags: new[] { WellKnownDiagnosticTags.NotConfigurable, WellKnownDiagnosticTags.CompilationEnd });
 
+    // DR0002 and DR0003 are already taken (EmptyRuleset, MalformedRule above), so the
+    // cross-module rule is DR0004, not DR0002 as its working name suggested.
+    internal static readonly DiagnosticDescriptor CrossModuleViolation = new(
+        id: "DR0004",
+        title: "Cross-module reference bypasses Contracts",
+        messageFormat: "'{0}' may reference module '{1}' only through '{1}.Contracts'; the type '{2}' is internal to that module",
+        category: "Architecture",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "A module may depend on another module's Contracts, never its Domain/Application/Transport/Infrastructure internals. Route the reference through the referenced module's Contracts project instead.",
+        customTags: WellKnownDiagnosticTags.NotConfigurable);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
-        ImmutableArray.Create(LayerViolation, EmptyRuleset, MalformedRule);
+        ImmutableArray.Create(LayerViolation, EmptyRuleset, MalformedRule, CrossModuleViolation);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -95,8 +108,16 @@ public sealed class LayerDependencyAnalyzer : DiagnosticAnalyzer
             });
         }
 
+        // The product prefix is derived, not hardcoded, so the analyzer keeps working
+        // unmodified if this template is ever cloned under a different product name. It is
+        // the same string whichever project in the solution is compiling: AssemblyName is
+        // "Jig.Modules.Users", "Jig.Host", "Jig.SharedKernel", etc., all sharing "Jig" as the
+        // first dot-segment.
+        var assemblyName = context.Compilation.AssemblyName ?? string.Empty;
+        var productPrefix = assemblyName.Split('.')[0];
+
         context.RegisterSyntaxNodeAction(
-            node => Inspect(node, rules),
+            node => Inspect(node, rules, productPrefix),
             SyntaxKind.IdentifierName,
             SyntaxKind.GenericName,
             SyntaxKind.QualifiedName);
@@ -107,7 +128,7 @@ public sealed class LayerDependencyAnalyzer : DiagnosticAnalyzer
             .FirstOrDefault(file => Path.GetFileName(file.Path) == RulesetFileName)
             ?.GetText()?.ToString();
 
-    private static void Inspect(SyntaxNodeAnalysisContext context, ImmutableArray<LayerRule> rules)
+    private static void Inspect(SyntaxNodeAnalysisContext context, ImmutableArray<LayerRule> rules, string productPrefix)
     {
         // A QualifiedNameSyntax chain (type position, e.g. "Jig.Infrastructure.Outer.Inner")
         // produces one node per segment, but every segment resolves within the same
@@ -131,15 +152,49 @@ public sealed class LayerDependencyAnalyzer : DiagnosticAnalyzer
         var symbol = context.SemanticModel.GetSymbolInfo(context.Node).Symbol;
         var type = symbol as ITypeSymbol ?? symbol?.ContainingType;
 
-        // Only first-party types can violate the layer map. A metadata-only reference (any
-        // NuGet package, the BCL) has no source location in this compilation, so it can never
-        // match here even if its namespace happens to end in a layer-shaped segment (e.g.
-        // Microsoft.EntityFrameworkCore.Infrastructure). Suffix matching in LayerRule.Matches
-        // relies on this guard for that exclusion instead of counting segments.
-        if (type is null || !type.Locations.Any(loc => loc.IsInSource)) return;
+        if (type is null) return;
+
+        // Only first-party (product) types can violate the layer map or the module boundary.
+        // A metadata-only reference (any NuGet package, the BCL) belongs to some other
+        // assembly and is excluded here, even if its namespace happens to end in a
+        // layer-shaped segment (e.g. Microsoft.EntityFrameworkCore.Infrastructure). This used
+        // to be gated on type.Locations.Any(IsInSource), which also (wrongly) excluded
+        // cross-project first-party references: a type from another Jig.Modules.* assembly is
+        // metadata to THIS compilation, so IsInSource was always false for it and cross-module
+        // violations could never fire. Gating on assembly membership instead of source
+        // location keeps third parties out while letting first-party cross-project references
+        // through for inspection below.
+        var referencedAssemblyName = type.ContainingAssembly?.Name;
+        var isProductAssembly = referencedAssemblyName is not null &&
+            (referencedAssemblyName == productPrefix ||
+             referencedAssemblyName.StartsWith(productPrefix + ".", StringComparison.Ordinal));
+        if (!isProductAssembly) return;
 
         var to = type.ContainingNamespace?.ToDisplayString();
         if (to is null) return;
+
+        // A module may depend on another module only through that module's Contracts —
+        // never its Domain/Application/Transport/Infrastructure internals. This is a separate
+        // axis from the intra-module layer map below: a cross-module reference is governed by
+        // DR0004 alone, not by DR0001, so same-module layer rules never run against it and a
+        // legitimate Contracts reference never gets layer-checked against the wrong module's
+        // layer map.
+        var sourceModule = LayerRule.ModuleOf(from);
+        var targetModule = LayerRule.ModuleOf(to);
+        if (sourceModule is not null && targetModule is not null && sourceModule != targetModule)
+        {
+            if (!LayerRule.IsContractsOf(to, targetModule))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    CrossModuleViolation,
+                    context.Node.GetLocation(),
+                    $"{productPrefix}.Modules.{sourceModule}",
+                    targetModule,
+                    type.Name));
+            }
+
+            return;
+        }
 
         foreach (var rule in rules)
         {
