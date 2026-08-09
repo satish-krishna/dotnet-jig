@@ -12,6 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FastEndpoints" />
+    <PackageReference Include="FastEndpoints.Swagger" />
+    <PackageReference Include="Scalar.AspNetCore" />
     <PackageReference Include="Microsoft.Extensions.DependencyModel" />
   </ItemGroup>
 </Project>
