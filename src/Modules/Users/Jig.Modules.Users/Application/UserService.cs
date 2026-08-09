@@ -9,6 +9,12 @@ internal sealed class UserService(IUserStore store, IEventDispatcher events)
     public async Task<Result<IReadOnlyList<User>>> List(CancellationToken ct)
         => Result<IReadOnlyList<User>>.Success(await store.All(ct));
 
+    public async Task<Result<User>> Get(PseudoKey id, CancellationToken ct)
+    {
+        var user = await store.Find(id, ct);
+        return user is null ? Error.NotFound($"User {id} was not found.") : user;
+    }
+
     public async Task<Result<User>> Create(string name, string email, CancellationToken ct)
     {
         if (await store.FindByEmail(email, ct) is not null)

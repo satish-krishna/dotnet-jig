@@ -1,11 +1,10 @@
-using FastEndpoints;
 using Jig.Modules.Users.Application;
-using Microsoft.AspNetCore.Http;
+using Jig.Web;
 
 namespace Jig.Modules.Users.Transport;
 
 internal sealed class CreateUserEndpoint(UserService users)
-    : Endpoint<CreateUserRequest, UserResponse>
+    : ResultEndpoint<CreateUserRequest, UserResponse>
 {
     public override void Configure()
     {
@@ -16,11 +15,6 @@ internal sealed class CreateUserEndpoint(UserService users)
     public override async Task HandleAsync(CreateUserRequest req, CancellationToken ct)
     {
         var result = await users.Create(req.Name, req.Email, ct);
-        if (!result.IsSuccess)
-        {
-            await Send.ResultAsync(Results.Conflict(result.Error!.Message));
-            return;
-        }
-        await Send.OkAsync(result.Value!.ToResponse(), ct);
+        await SendResultAsync(result, u => u.ToResponse(), ct);
     }
 }
