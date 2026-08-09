@@ -62,7 +62,7 @@ public sealed class LayerDependencyAnalyzer : DiagnosticAnalyzer
     internal static readonly DiagnosticDescriptor CrossModuleViolation = new(
         id: "DR0004",
         title: "Cross-module reference bypasses Contracts",
-        messageFormat: "'{0}' may reference module '{1}' only through '{1}.Contracts'; the type '{2}' is internal to that module",
+        messageFormat: "'{0}' may reference module '{1}' only through '{1}.Contracts'; the type '{2}' is not part of module '{1}'s published contract ('{1}.Contracts')",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
