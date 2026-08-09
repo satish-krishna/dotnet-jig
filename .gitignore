@@ -13,3 +13,8 @@ artifacts/
 ## OS
 .DS_Store
 Thumbs.db
+
+# SQLite database files (local runs)
+*.db
+*.db-shm
+*.db-wal
