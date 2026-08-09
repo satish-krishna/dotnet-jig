@@ -1,6 +1,7 @@
 using System.Reflection;
 using Jig.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyModel;
 
 namespace Jig.Host;
 
@@ -8,23 +9,18 @@ internal static class ModuleDiscovery
 {
     public static Assembly[] DiscoverAndRegister(IServiceCollection services)
     {
-        var moduleAssemblies = new[]
-        {
-            typeof(Jig.Modules.Users.UsersModuleMarker).Assembly,
-        };
+        var moduleAssemblies = DependencyContext.Default!.RuntimeLibraries
+            .Where(l => l.Name.StartsWith("Jig.Modules.", StringComparison.Ordinal)
+                        && !l.Name.EndsWith(".Contracts", StringComparison.Ordinal))
+            .Select(l => Assembly.Load(new AssemblyName(l.Name)))
+            .Distinct()
+            .ToArray();
 
         foreach (var assembly in moduleAssemblies)
-        {
-            var moduleTypes = assembly.GetTypes()
-                .Where(t => typeof(IModule).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false });
+            foreach (var moduleType in assembly.GetTypes()
+                         .Where(t => typeof(IModule).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false }))
+                ((IModule)Activator.CreateInstance(moduleType)!).Register(services);
 
-            foreach (var moduleType in moduleTypes)
-            {
-                var module = (IModule)Activator.CreateInstance(moduleType)!;
-                module.Register(services);
-            }
-        }
-
-        return moduleAssemblies.Distinct().ToArray();
+        return moduleAssemblies;
     }
 }

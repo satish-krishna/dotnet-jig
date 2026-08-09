@@ -1,7 +1,10 @@
 using FastEndpoints;
 using Jig.Host;
+using Jig.SharedKernel;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<IEventDispatcher, InProcessEventDispatcher>();
 
 var moduleAssemblies = ModuleDiscovery.DiscoverAndRegister(builder.Services);
 

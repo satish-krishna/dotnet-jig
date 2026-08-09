@@ -7,8 +7,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Jig.SharedKernel\Jig.SharedKernel.csproj" />
     <ProjectReference Include="..\Modules\Users\Jig.Modules.Users\Jig.Modules.Users.csproj" />
+    <ProjectReference Include="..\Modules\Notifications\Jig.Modules.Notifications\Jig.Modules.Notifications.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FastEndpoints" />
+    <PackageReference Include="Microsoft.Extensions.DependencyModel" />
   </ItemGroup>
 </Project>
