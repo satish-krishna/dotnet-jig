@@ -6,9 +6,15 @@ using Xunit;
 
 namespace Jig.Modules.Users.Tests;
 
+internal sealed class NoOpDispatcher : IEventDispatcher
+{
+    public Task Publish<TEvent>(TEvent e, CancellationToken ct) where TEvent : IIntegrationEvent
+        => Task.CompletedTask;
+}
+
 public class UserServiceTests
 {
-    private static UserService NewService() => new(new InMemoryUserStore());
+    private static UserService NewService() => new(new InMemoryUserStore(), new NoOpDispatcher());
 
     [Fact]
     public async Task Create_then_List_returns_the_user()

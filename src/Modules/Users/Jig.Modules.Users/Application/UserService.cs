@@ -1,9 +1,10 @@
+using Jig.Modules.Users.Contracts;
 using Jig.Modules.Users.Domain;
 using Jig.SharedKernel;
 
 namespace Jig.Modules.Users.Application;
 
-internal sealed class UserService(IUserStore store)
+internal sealed class UserService(IUserStore store, IEventDispatcher events)
 {
     public async Task<Result<IReadOnlyList<User>>> List(CancellationToken ct)
         => Result<IReadOnlyList<User>>.Success(await store.All(ct));
@@ -15,6 +16,7 @@ internal sealed class UserService(IUserStore store)
 
         var user = new User(PseudoKey.New(), name, email);
         await store.Add(user, ct);
+        await events.Publish(new UserRegistered(user.Id.Value, user.Name, user.Email), ct);
         return user;
     }
 }
