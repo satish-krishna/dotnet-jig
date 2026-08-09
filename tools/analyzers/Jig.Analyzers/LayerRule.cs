@@ -78,16 +78,19 @@ public readonly struct LayerRule
     /// Match a namespace against a pattern. "*" stands for the prefix ahead of the layer
     /// segment(s) — one or more segments, never zero — so the same rule covers both a flat
     /// product namespace ("Jig.Infrastructure") and a modular one nested under a module
-    /// segment ("Jig.Modules.Users.Infrastructure"). The match is anchored at the END of the
-    /// namespace: the last N segments must equal the layer segments, where N is the segment
-    /// count of the pattern's layer part. A bare layer name with nothing ahead of it (the
-    /// global namespace) never matches, since the prefix requires at least one segment.
-    /// This intentionally no longer excludes same-shaped third-party namespaces like
-    /// "Microsoft.EntityFrameworkCore.Infrastructure" by segment count alone; the caller
-    /// guards against that by only evaluating symbols declared in the current compilation
-    /// (see LayerDependencyAnalyzer.Inspect), which a metadata-only third-party type never is.
+    /// segment ("Jig.Modules.Users.Infrastructure"). The layer segments may start at any
+    /// index from 1 onward (never index 0, so the global namespace and a bare module root
+    /// like "Jig.Modules.Users" are never themselves a layer), and segments after the layer
+    /// run are allowed, so a sub-namespace nested under a layer
+    /// ("Jig.Modules.Users.Infrastructure.Persistence.EfCore") still matches "*.Infrastructure"
+    /// instead of silently escaping enforcement. This intentionally does not exclude
+    /// same-shaped third-party namespaces like "Microsoft.EntityFrameworkCore.Infrastructure"
+    /// by segment count or position; the caller guards against that by only evaluating symbols
+    /// declared in the current compilation (see LayerDependencyAnalyzer.Inspect), which a
+    /// metadata-only third-party type never is.
     /// A pattern without "*." is matched as a fixed, literal prefix instead (segment
-    /// boundaries still apply), so "Jig.Domain" matches "Jig.Domain.Sub" but not "Acme.Domain".
+    /// boundaries still apply, anchored at index 0), so "Jig.Domain" matches "Jig.Domain.Sub"
+    /// but not "Acme.Domain".
     /// </summary>
     private static bool Matches(string pattern, string ns)
     {
@@ -95,19 +98,28 @@ public readonly struct LayerRule
 
         if (pattern.StartsWith(Wildcard, StringComparison.Ordinal))
         {
-            // "*.Layer[.Rest]": the layer segments must be the trailing segments of the
-            // namespace, with at least one segment ahead of them (the module/product prefix,
-            // whatever its own depth turns out to be).
+            // "*.Layer[.Rest]": the layer segments may appear starting at any index >= 1
+            // (at least one prefix segment ahead of them, whatever its own depth turns out to
+            // be), and segments after the layer run are allowed, so a sub-namespace nested
+            // under the layer still matches.
             var layerSegments = pattern.Substring(Wildcard.Length).Split('.');
-            var offset = segments.Length - layerSegments.Length;
-            if (offset < 1) return false;
 
-            for (var i = 0; i < layerSegments.Length; i++)
+            for (var offset = 1; offset + layerSegments.Length <= segments.Length; offset++)
             {
-                if (segments[offset + i] != layerSegments[i]) return false;
+                var isMatch = true;
+                for (var i = 0; i < layerSegments.Length; i++)
+                {
+                    if (segments[offset + i] != layerSegments[i])
+                    {
+                        isMatch = false;
+                        break;
+                    }
+                }
+
+                if (isMatch) return true;
             }
 
-            return true;
+            return false;
         }
 
         // No wildcard: the pattern itself must match a prefix of whole segments.
