@@ -1,4 +1,5 @@
 using Jig.Modules.Users.Application;
+using Jig.Modules.Users.Contracts;
 using Jig.Modules.Users.Domain;
 using Jig.Modules.Users.Infrastructure;
 using Jig.SharedKernel;
@@ -15,5 +16,6 @@ internal sealed class UsersModule : IModule
         // scoped (Risk R2, the captive-dependency trap).
         services.AddSingleton<IUserStore, InMemoryUserStore>();
         services.AddSingleton<UserService>();
+        services.AddSingleton<IUserDirectory, UserDirectory>();
     }
 }

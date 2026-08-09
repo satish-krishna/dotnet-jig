@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Jig.SharedKernel\Jig.SharedKernel.csproj" />
+    <ProjectReference Include="..\Jig.Modules.Users.Contracts\Jig.Modules.Users.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FastEndpoints" />
