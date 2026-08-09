@@ -130,7 +130,15 @@ public sealed class LayerDependencyAnalyzer : DiagnosticAnalyzer
 
         var symbol = context.SemanticModel.GetSymbolInfo(context.Node).Symbol;
         var type = symbol as ITypeSymbol ?? symbol?.ContainingType;
-        var to = type?.ContainingNamespace?.ToDisplayString();
+
+        // Only first-party types can violate the layer map. A metadata-only reference (any
+        // NuGet package, the BCL) has no source location in this compilation, so it can never
+        // match here even if its namespace happens to end in a layer-shaped segment (e.g.
+        // Microsoft.EntityFrameworkCore.Infrastructure). Suffix matching in LayerRule.Matches
+        // relies on this guard for that exclusion instead of counting segments.
+        if (type is null || !type.Locations.Any(loc => loc.IsInSource)) return;
+
+        var to = type.ContainingNamespace?.ToDisplayString();
         if (to is null) return;
 
         foreach (var rule in rules)

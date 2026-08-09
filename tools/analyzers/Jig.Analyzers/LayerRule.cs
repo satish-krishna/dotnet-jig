@@ -75,12 +75,18 @@ public readonly struct LayerRule
         Matches(From, fromNamespace) && Matches(To, toNamespace);
 
     /// <summary>
-    /// Match a namespace against a pattern. "*" stands for exactly one segment — the
-    /// product prefix that `tools/init/init.mjs` derives once per clone — never "any prefix".
-    /// So "*.Infrastructure" matches "Jig.Infrastructure" and "Jig.Infrastructure.Sub" but
-    /// not "Microsoft.EntityFrameworkCore.Infrastructure": that namespace has two segments
-    /// before "Infrastructure", so it belongs to a third party, not to our Infrastructure
-    /// layer. A pattern without "*." is matched as a fixed, literal prefix instead (segment
+    /// Match a namespace against a pattern. "*" stands for the prefix ahead of the layer
+    /// segment(s) — one or more segments, never zero — so the same rule covers both a flat
+    /// product namespace ("Jig.Infrastructure") and a modular one nested under a module
+    /// segment ("Jig.Modules.Users.Infrastructure"). The match is anchored at the END of the
+    /// namespace: the last N segments must equal the layer segments, where N is the segment
+    /// count of the pattern's layer part. A bare layer name with nothing ahead of it (the
+    /// global namespace) never matches, since the prefix requires at least one segment.
+    /// This intentionally no longer excludes same-shaped third-party namespaces like
+    /// "Microsoft.EntityFrameworkCore.Infrastructure" by segment count alone; the caller
+    /// guards against that by only evaluating symbols declared in the current compilation
+    /// (see LayerDependencyAnalyzer.Inspect), which a metadata-only third-party type never is.
+    /// A pattern without "*." is matched as a fixed, literal prefix instead (segment
     /// boundaries still apply), so "Jig.Domain" matches "Jig.Domain.Sub" but not "Acme.Domain".
     /// </summary>
     private static bool Matches(string pattern, string ns)
@@ -89,13 +95,16 @@ public readonly struct LayerRule
 
         if (pattern.StartsWith(Wildcard, StringComparison.Ordinal))
         {
-            // "*.Layer[.Rest]" needs at least a product segment plus the layer segment.
+            // "*.Layer[.Rest]": the layer segments must be the trailing segments of the
+            // namespace, with at least one segment ahead of them (the module/product prefix,
+            // whatever its own depth turns out to be).
             var layerSegments = pattern.Substring(Wildcard.Length).Split('.');
-            if (segments.Length < 1 + layerSegments.Length) return false;
+            var offset = segments.Length - layerSegments.Length;
+            if (offset < 1) return false;
 
             for (var i = 0; i < layerSegments.Length; i++)
             {
-                if (segments[1 + i] != layerSegments[i]) return false;
+                if (segments[offset + i] != layerSegments[i]) return false;
             }
 
             return true;
