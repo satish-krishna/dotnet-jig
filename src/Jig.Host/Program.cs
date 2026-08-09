@@ -7,6 +7,12 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.UseDefaultServiceProvider((_, options) =>
+{
+    options.ValidateScopes = true;
+    options.ValidateOnBuild = true;
+});
+
 builder.Services.AddSingleton<IEventDispatcher, InProcessEventDispatcher>();
 
 var moduleAssemblies = ModuleDiscovery.DiscoverAndRegister(builder.Services);
