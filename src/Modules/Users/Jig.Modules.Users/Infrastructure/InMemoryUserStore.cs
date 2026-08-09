@@ -25,14 +25,20 @@ internal sealed class InMemoryUserStore : IUserStore
     public Task<User?> FindByEmail(string email, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        var user = _users.Values.FirstOrDefault(u => u.Email == email);
+        var user = _users.Values.FirstOrDefault(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
         return Task.FromResult(user);
     }
 
-    public Task Add(User user, CancellationToken ct)
+    public Task<Result<User>> Add(User user, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+
+        // Mirrors the database's case-insensitive unique index on Email: the in-memory store is
+        // the single arbiter of uniqueness here too, not a pre-check the caller has to run first.
+        if (_users.Values.Any(u => string.Equals(u.Email, user.Email, StringComparison.OrdinalIgnoreCase)))
+            return Task.FromResult(Result<User>.Failure(Error.Conflict($"Email {user.Email} is already in use.")));
+
         _users[user.Id] = user;
-        return Task.CompletedTask;
+        return Task.FromResult(Result<User>.Success(user));
     }
 }

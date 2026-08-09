@@ -15,5 +15,12 @@ internal static class UserStoreContract
         (await store.FindByEmail("ada@example.com", ct)).ShouldNotBeNull();   // case-insensitive
         (await store.All(ct)).ShouldContain(u => u.Id == ada.Id);
         (await store.Find(PseudoKey.New(), ct)).ShouldBeNull();
+
+        // A case-different duplicate email is a modeled Conflict from the store, not a thrown
+        // exception the caller has to translate. The store is the single arbiter of uniqueness.
+        var duplicate = new User(PseudoKey.New(), "Ada Two", "ada@example.com");
+        var addDuplicate = await store.Add(duplicate, ct);
+        addDuplicate.IsSuccess.ShouldBeFalse();
+        addDuplicate.Error!.Kind.ShouldBe(ErrorKind.Conflict);
     }
 }

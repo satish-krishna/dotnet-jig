@@ -20,9 +20,21 @@ internal sealed class EfUserStore(JigDbContext db) : IUserStore
         // case-insensitive at the database: "Ada@x.com" and "ada@x.com" match the same row.
         => await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == email, ct);
 
-    public async Task Add(User user, CancellationToken ct)
+    public async Task<Result<User>> Add(User user, CancellationToken ct)
     {
         db.Users.Add(user);
-        await db.SaveChangesAsync(ct);
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return user;
+        }
+        catch (DbUpdateException)
+        {
+            // The only unique constraint on this table is the case-insensitive index on Email,
+            // so a DbUpdateException here means a duplicate email raced past whatever check the
+            // caller may have made. The database is the single arbiter, not a pre-check upstream.
+            return Error.Conflict($"Email {user.Email} is already in use.");
+        }
     }
 }
