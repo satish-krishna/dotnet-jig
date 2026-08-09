@@ -4,11 +4,15 @@
     <Project Path="src/Jig.SharedKernel/Jig.SharedKernel.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Notifications/">
+    <Project Path="src/Modules/Notifications/Jig.Modules.Notifications/Jig.Modules.Notifications.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Users/">
     <Project Path="src/Modules/Users/Jig.Modules.Users.Contracts/Jig.Modules.Users.Contracts.csproj" />
     <Project Path="src/Modules/Users/Jig.Modules.Users/Jig.Modules.Users.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Jig.Modules.Notifications.Tests/Jig.Modules.Notifications.Tests.csproj" />
     <Project Path="tests/Jig.Modules.Users.Tests/Jig.Modules.Users.Tests.csproj" />
     <Project Path="tests/Jig.SharedKernel.Tests/Jig.SharedKernel.Tests.csproj" />
   </Folder>

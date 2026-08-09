@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Jig.SharedKernel\Jig.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Users\Jig.Modules.Users.Contracts\Jig.Modules.Users.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FastEndpoints" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Jig.Modules.Notifications.Tests" />
+  </ItemGroup>
+</Project>
