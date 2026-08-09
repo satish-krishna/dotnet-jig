@@ -1,4 +1,10 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jig.SharedKernel/Jig.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jig.SharedKernel.Tests/Jig.SharedKernel.Tests.csproj" />
+  </Folder>
   <Folder Name="/tools/" />
   <Folder Name="/tools/analyzers/">
     <Project Path="tools/analyzers/Jig.Analyzers/Jig.Analyzers.csproj" />
