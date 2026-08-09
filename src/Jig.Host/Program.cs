@@ -32,7 +32,11 @@ builder.Services.AddExceptionHandler<FallbackExceptionHandler>();
 
 var app = builder.Build();
 app.UseExceptionHandler();
-app.UseFastEndpoints(c => c.Endpoints.RoutePrefix = "v1");
+app.UseFastEndpoints(c =>
+{
+    c.Endpoints.RoutePrefix = "v1";
+    c.Errors.UseProblemDetails();
+});
 app.UseSwaggerGen();
 app.MapScalarApiReference(o => o.WithOpenApiRoutePattern("/swagger/v1/swagger.json"));
 app.Run();
