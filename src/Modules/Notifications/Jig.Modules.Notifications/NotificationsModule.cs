@@ -13,5 +13,9 @@ internal sealed class NotificationsModule : IModule
     {
         services.AddSingleton<INotificationStore, InMemoryNotificationStore>();
         services.AddSingleton<IIntegrationEventHandler<UserRegistered>, UserRegisteredHandler>();
+        services.AddOptions<NotificationsOptions>()
+            .BindConfiguration("Notifications")
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
     }
 }
