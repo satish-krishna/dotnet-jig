@@ -11,6 +11,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FastEndpoints" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="MongoDB.Driver" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Jig.Modules.Users.Tests" />
