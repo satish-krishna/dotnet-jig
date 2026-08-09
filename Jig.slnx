@@ -1,2 +1,6 @@
 <Solution>
+  <Folder Name="/tools/" />
+  <Folder Name="/tools/analyzers/">
+    <Project Path="tools/analyzers/Jig.Analyzers/Jig.Analyzers.csproj" />
+  </Folder>
 </Solution>

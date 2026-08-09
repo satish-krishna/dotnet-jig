@@ -1,0 +1,18 @@
+# The intra-module layer map. Patterns are wildcarded on the layer segment, so
+# one rule set applies to every module at once (Jig.Modules.X.Domain, .Application,
+# .Transport, .Infrastructure). Matching is on namespace segment boundaries and does
+# not cover the global namespace where top-level statements put Program.
+#
+# Changing this file is a law change. It is reviewed as one.
+#
+# The cross-module rule (a module may reference another only via its .Contracts,
+# never its internals) is NOT here yet: it needs an analyzer code change and lands
+# on the modules branch (Part II).
+#
+# from            -> forbidden
+*.Domain          -> *.Application
+*.Domain          -> *.Transport
+*.Domain          -> *.Infrastructure
+*.Application     -> *.Transport
+*.Application     -> *.Infrastructure
+*.Transport       -> *.Infrastructure
