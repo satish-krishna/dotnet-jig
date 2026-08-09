@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Jig.Host/Jig.Host.csproj" />
     <Project Path="src/Jig.SharedKernel/Jig.SharedKernel.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
