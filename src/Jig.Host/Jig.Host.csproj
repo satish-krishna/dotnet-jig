@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Jig.SharedKernel\Jig.SharedKernel.csproj" />
+    <ProjectReference Include="..\Jig.Web\Jig.Web.csproj" />
     <ProjectReference Include="..\Modules\Users\Jig.Modules.Users\Jig.Modules.Users.csproj" />
     <ProjectReference Include="..\Modules\Notifications\Jig.Modules.Notifications\Jig.Modules.Notifications.csproj" />
   </ItemGroup>
