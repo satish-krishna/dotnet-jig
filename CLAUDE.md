@@ -15,7 +15,7 @@ A modular monolith .NET 10 Web API: one process you deploy as a whole, split int
 
 ## The rules (enforced, not remembered)
 
-- Layer direction is a compiler rule. A `Transport` or `Infrastructure` type must not be referenced from `Domain`; the analyzer (rule DR0001) turns a violation into a red build. See ADR-0005 (the layered namespaces decision).
+- Layer direction is a compiler rule. A `Transport` or `Infrastructure` type must not be referenced from `Domain`; the analyzer (rule DR0001) turns a violation into a red build. See ADR-0006 (machine-checked gates).
 - Cross-module access is a compiler rule. A module may reference another only through its `.Contracts` (DR0004). See ADR-0001.
 - Expected failures travel as `Result<T>`, not exceptions. `ResultEndpoint` maps the error kind to an HTTP status in one place. See ADR-0003.
 - Persistence sits behind a domain-shaped port the module owns (for example `IUserStore`), never a generic repository, and the store is chosen at runtime from configuration. See ADR-0002 and ADR-0004.

@@ -51,15 +51,17 @@ const refName = (ref: string): string => ref.split("/").pop()!;
 function tsType(schema: any): string {
   if (!schema) return "void";
   if (schema.$ref) return refName(schema.$ref);
+  let base: string;
   switch (schema.type) {
-    case "string": return "string";
+    case "string": base = "string"; break;
     case "integer":
-    case "number": return "number";
-    case "boolean": return "boolean";
-    case "array": return `${tsType(schema.items)}[]`;
-    case "object": return "Record<string, unknown>";
-    default: return "unknown";
+    case "number": base = "number"; break;
+    case "boolean": base = "boolean"; break;
+    case "array": base = `${tsType(schema.items)}[]`; break;
+    case "object": base = "Record<string, unknown>"; break;
+    default: base = "unknown"; break;
   }
+  return schema.nullable ? `${base} | null` : base;
 }
 
 function emitInterfaces(schemas: Record<string, any>): string {
@@ -98,6 +100,7 @@ function emitPaths(paths: Record<string, any>): string {
 
 const spec = await dumpSpec();
 delete spec.servers; // environment-specific; excluded so the committed spec is deterministic.
+delete spec["x-generator"]; // the NSwag version string would red the drift check on any package bump.
 
 await mkdir(dirname(SPEC_PATH), { recursive: true });
 await Bun.write(SPEC_PATH, JSON.stringify(spec, null, 2) + "\n");

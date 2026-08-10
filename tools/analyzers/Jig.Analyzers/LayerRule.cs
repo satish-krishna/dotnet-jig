@@ -23,7 +23,7 @@ public readonly struct LayerRule
     }
 
     /// <summary>Parse the layer map, discarding malformed-line detail. Prefer the two-argument overload
-    /// wherever a malformed line must not vanish silently — see ADR 0009 / DR0003.</summary>
+    /// wherever a malformed line must not vanish silently — see docs/adr/0006-machine-checked-gates.md / DR0003.</summary>
     public static ImmutableArray<LayerRule> Parse(string? text) => Parse(text, out _);
 
     /// <summary>

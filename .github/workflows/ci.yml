@@ -41,4 +41,5 @@ jobs:
         with:
           fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
-      - run: bunx --bun commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.sha }}
+      - run: bun install --frozen-lockfile
+      - run: bunx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.sha }}

@@ -1,0 +1,4 @@
+# The codegen drift check compares these byte for byte, so keep them LF on every platform,
+# regardless of a contributor's core.autocrlf.
+clients/typescript/api.ts eol=lf
+tools/codegen/openapi.json eol=lf

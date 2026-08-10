@@ -8,7 +8,7 @@ An architecture diagram draws a clean line around the data layer and calls the s
 
 ## Decision
 
-The port belongs to the module, and the concrete store is a runtime choice read from configuration, not a compile-time reference. Because the port belongs to the module and not the application, each module owns its store: Users can run on EF Core over SQL while Notifications runs on a document database, in one process, chosen per module. Everything provider-specific stops inside the store implementation, and both implementations pass one shared contract test.
+The port belongs to the module, and the concrete store is a runtime choice read from configuration, not a compile-time reference. Because the port belongs to the module and not the application, each module owns and chooses its store independently. Users runs behind `IUserStore` with two real implementations, EF Core over SQLite and MongoDB, selected at runtime from configuration; Notifications owns its own store separately (in-memory today). Everything provider-specific stops inside the store implementation, and the two Users implementations pass one shared contract test.
 
 ## Consequences
 

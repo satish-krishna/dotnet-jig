@@ -20,7 +20,7 @@ namespace Jig.Analyzers;
 /// All three diagnostics are NotConfigurable: the severity lives in compiled code, so
 /// .editorconfig, NoWarn, and #pragma cannot switch them off. DR0001 reports a layer
 /// violation; DR0002 and DR0003 guard the ruleset itself, which would otherwise be the
-/// one thing a green build could not tell you about. See ADR 0009.
+/// one thing a green build could not tell you about. See docs/adr/0006-machine-checked-gates.md.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class LayerDependencyAnalyzer : DiagnosticAnalyzer
@@ -86,7 +86,7 @@ public sealed class LayerDependencyAnalyzer : DiagnosticAnalyzer
         {
             // A check that goes green because its ruleset vanished is paperwork. Deletion is
             // neither Write nor Edit, so no PreToolUse hook can catch `rm ArchLayers.txt` —
-            // this is the only guard that sees it. See ADR 0009.
+            // this is the only guard that sees it. See docs/adr/0006-machine-checked-gates.md.
             context.RegisterCompilationEndAction(end => end.ReportDiagnostic(
                 Diagnostic.Create(EmptyRuleset, Location.None, RulesetFileName)));
             return;

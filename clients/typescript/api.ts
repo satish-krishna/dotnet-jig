@@ -7,7 +7,7 @@ export interface CreateUserRequest {
 
 export interface DevTokenRequest {
   subject?: string;
-  scopes?: string[];
+  scopes?: string[] | null;
 }
 
 export interface GetUserRequest {
@@ -20,15 +20,15 @@ export interface ProblemDetails {
   status?: number;
   instance?: string;
   traceId?: string;
-  detail?: string;
+  detail?: string | null;
   errors?: ProblemDetails_Error[];
 }
 
 export interface ProblemDetails_Error {
   name?: string;
   reason?: string;
-  code?: string;
-  severity?: string;
+  code?: string | null;
+  severity?: string | null;
 }
 
 export interface UserNotificationsResponse {
