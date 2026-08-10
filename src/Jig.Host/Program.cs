@@ -119,6 +119,7 @@ builder.Services.AddHealthChecks()
 builder.Services.AddOptions<SecurityOptions>()
     .BindConfiguration("Security").ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
 // Configured from the bound options rather than an eager Configuration read, so a config override
 // (a test host, an env var) is honored: the options system builds SecurityOptions from final config.
