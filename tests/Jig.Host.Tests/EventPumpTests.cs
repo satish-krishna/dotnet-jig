@@ -61,7 +61,8 @@ public class EventPumpTests
         ActivitySource.AddActivityListener(listener);
 
         var requestTraceId = ActivityTraceId.CreateRandom();
-        var parent = new ActivityContext(requestTraceId, ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded);
+        var parentSpanId = ActivitySpanId.CreateRandom();
+        var parent = new ActivityContext(requestTraceId, parentSpanId, ActivityTraceFlags.Recorded);
 
         var recorder = new Recorder();
         var services = new ServiceCollection().BuildServiceProvider();
@@ -76,7 +77,9 @@ public class EventPumpTests
         await recorder.Signal.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         await pump.StopAsync(TestContext.Current.CancellationToken);
 
-        spans.ShouldHaveSingleItem().TraceId.ShouldBe(requestTraceId);
+        var span = spans.ShouldHaveSingleItem();
+        span.TraceId.ShouldBe(requestTraceId);
+        span.ParentSpanId.ShouldBe(parentSpanId);
     }
 
     [Fact]

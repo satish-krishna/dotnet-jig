@@ -33,4 +33,8 @@ docker compose stop app
 docker compose logs app
 ```
 
-The readiness gate closes first (a `/health/ready` probe would now return 503 while `/health/live` stays 200), then the pump drains whatever was still buffered before the process exits, bounded by the 30 second shutdown timeout. Nothing in flight is dropped.
+The readiness gate closes first (a `/health/ready` probe would now return 503 while `/health/live` stays 200), then the pump drains whatever was buffered when shutdown began, bounded by the 30 second shutdown timeout.
+
+One honest limit, because this design is deliberately non-durable: hosted services stop before the HTTP server does, so an event published by a request that is itself still finishing during the shutdown window can land in the channel after the pump has already drained and exited, and that one is lost. Events already queued when shutdown starts are the ones drained here. A crash loses in-flight events the same way. Durability, a persistent outbox, is a later problem, and the reason is Part 5: each module owns its store and it might be Mongo, so there is no single transaction to enroll an outbox write into.
+
+Backpressure is by design too. The channel is bounded at 1024. If the worker falls far enough behind to fill it, publishing blocks the calling request until space frees, so a sustained backlog pushes latency back onto the request thread. That is the pressure valve working, not a bug.

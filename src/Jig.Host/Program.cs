@@ -49,12 +49,12 @@ builder.Services.AddOpenTelemetry()
     .WithTracing(t =>
     {
         t.AddSource(JigDiagnostics.SourceName).AddAspNetCoreInstrumentation();
-        if (otlpEndpoint is not null) t.AddOtlpExporter();
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint)) t.AddOtlpExporter();
     })
     .WithMetrics(m =>
     {
         m.AddMeter(JigDiagnostics.SourceName).AddAspNetCoreInstrumentation();
-        if (otlpEndpoint is not null) m.AddOtlpExporter();
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint)) m.AddOtlpExporter();
     });
 
 // Traces and metrics ride the OpenTelemetry listener above. Logs go through Serilog behind

@@ -17,6 +17,9 @@ internal sealed class JigApiFactory : WebApplicationFactory<Program>
             {
                 ["Persistence:Provider"] = "EfCore",
                 ["Persistence:ConnectionString"] = $"Data Source={_dbPath}",
+                // Force telemetry export off regardless of any ambient OTEL endpoint on the box,
+                // so booting the host in a test never attaches a real OTLP exporter.
+                ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",
             }));
     }
 

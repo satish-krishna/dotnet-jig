@@ -25,8 +25,11 @@ internal sealed class EventPump(
             // Shutdown requested. Fall through and drain what is already buffered.
         }
 
-        // Drain events enqueued before shutdown so a rolling deploy does not drop them. The host
-        // ShutdownTimeout caps how long this may take before the process is forced down.
+        // Drain events buffered when shutdown began so a rolling deploy does not drop them. The
+        // host ShutdownTimeout caps how long this may take. Honest limit: hosted services stop
+        // before Kestrel (LIFO registration), so an event published by a request still finishing
+        // during the server's own drain can arrive after this returns and be lost. That is the
+        // same non-durability this design owns on purpose; durability is a later Part's problem.
         while (channel.Reader.TryRead(out var envelope))
             await Dispatch(envelope);
     }
