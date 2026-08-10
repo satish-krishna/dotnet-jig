@@ -13,14 +13,22 @@ const SPEC_PATH = "tools/codegen/openapi.json";
 const OUT_PATH = "clients/typescript/api.ts";
 
 async function dumpSpec(): Promise<any> {
-  const proc = Bun.spawn(
-    ["dotnet", "run", "--project", "src/Jig.Host", "--no-launch-profile", "--configuration", "Release"],
-    {
-      env: { ...process.env, ASPNETCORE_URLS: `http://localhost:${PORT}`, ASPNETCORE_ENVIRONMENT: "Development" },
-      stdout: "ignore",
-      stderr: "ignore",
-    },
+  // Build first, then run the built assembly directly. `dotnet run` launches the app as a child
+  // process that survives proc.kill(), leaving a zombie that locks the build outputs; running the
+  // dll is a single process we can kill cleanly.
+  const build = Bun.spawnSync(
+    ["dotnet", "build", "src/Jig.Host", "--configuration", "Release", "--nologo"],
+    { stdout: "ignore", stderr: "ignore" },
   );
+  if (build.exitCode !== 0) throw new Error("the app failed to build");
+
+  // Run from the host project directory so the content root finds appsettings.json.
+  const proc = Bun.spawn(["dotnet", "bin/Release/net10.0/Jig.Host.dll"], {
+    cwd: "src/Jig.Host",
+    env: { ...process.env, ASPNETCORE_URLS: `http://localhost:${PORT}`, ASPNETCORE_ENVIRONMENT: "Development" },
+    stdout: "ignore",
+    stderr: "ignore",
+  });
   try {
     for (let i = 0; i < 120; i++) {
       try {
