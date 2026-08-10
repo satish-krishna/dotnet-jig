@@ -7,12 +7,13 @@ namespace Jig.Host.Tests;
 
 // Boots the real host with a private SQLite file per factory, so booting for a test neither
 // clobbers the dev jig.db nor collides with another test. Everything else is the real wiring.
-internal sealed class JigApiFactory : WebApplicationFactory<Program>
+internal sealed class JigApiFactory(string environment = "Production") : WebApplicationFactory<Program>
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"jig-test-{Guid.NewGuid():N}.db");
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment(environment);
         builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {

@@ -191,6 +191,8 @@ app.MapScalarApiReference(o => o.WithOpenApiRoutePattern("/swagger/v1/swagger.js
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") });
 
+app.MapDevTokenEndpoint();
+
 app.Run();
 
 // Exposed so the integration tests can drive the host through WebApplicationFactory.
