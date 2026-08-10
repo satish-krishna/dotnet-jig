@@ -16,6 +16,7 @@
     <Project Path="tests/Jig.Modules.Notifications.Tests/Jig.Modules.Notifications.Tests.csproj" />
     <Project Path="tests/Jig.Modules.Users.Tests/Jig.Modules.Users.Tests.csproj" />
     <Project Path="tests/Jig.SharedKernel.Tests/Jig.SharedKernel.Tests.csproj" />
+    <Project Path="tests/Jig.Host.Tests/Jig.Host.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/" />
   <Folder Name="/tools/analyzers/">

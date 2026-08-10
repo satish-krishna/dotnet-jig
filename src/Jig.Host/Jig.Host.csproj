@@ -16,4 +16,7 @@
     <PackageReference Include="Scalar.AspNetCore" />
     <PackageReference Include="Microsoft.Extensions.DependencyModel" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Jig.Host.Tests" />
+  </ItemGroup>
 </Project>
