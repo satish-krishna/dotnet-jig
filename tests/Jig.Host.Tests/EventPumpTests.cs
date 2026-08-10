@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Threading.Channels;
 using Jig.Host.Runtime;
 using Jig.SharedKernel;
@@ -35,7 +36,7 @@ public class EventPumpTests
             .AddSingleton<IIntegrationEventHandler<Pinged>>(recorder)
             .BuildServiceProvider();
         var channel = Channel.CreateBounded<EventEnvelope>(8);
-        using var diagnostics = new JigDiagnostics();
+        using var diagnostics = new JigDiagnostics(channel);
         var pump = NewPump(channel, services, diagnostics);
         IEventDispatcher dispatcher = new ChannelEventDispatcher(channel);
 
@@ -65,7 +66,7 @@ public class EventPumpTests
         var recorder = new Recorder();
         var services = new ServiceCollection().BuildServiceProvider();
         var channel = Channel.CreateBounded<EventEnvelope>(8);
-        using var diagnostics = new JigDiagnostics();
+        using var diagnostics = new JigDiagnostics(channel);
         var pump = NewPump(channel, services, diagnostics);
 
         await pump.StartAsync(TestContext.Current.CancellationToken);
@@ -76,5 +77,40 @@ public class EventPumpTests
         await pump.StopAsync(TestContext.Current.CancellationToken);
 
         spans.ShouldHaveSingleItem().TraceId.ShouldBe(requestTraceId);
+    }
+
+    [Fact]
+    public async Task Processing_an_event_increments_the_processed_counter()
+    {
+        long processed = 0;
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Meter.Name == JigDiagnostics.SourceName && instrument.Name == "jig.integration_events.processed")
+                    l.EnableMeasurementEvents(instrument);
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, measurement, _, _) => Interlocked.Add(ref processed, measurement));
+        listener.Start();
+
+        var recorder = new Recorder();
+        var services = new ServiceCollection()
+            .AddSingleton<IIntegrationEventHandler<Pinged>>(recorder)
+            .BuildServiceProvider();
+        var channel = Channel.CreateBounded<EventEnvelope>(8);
+        using var diagnostics = new JigDiagnostics(channel);
+        var pump = NewPump(channel, services, diagnostics);
+        IEventDispatcher dispatcher = new ChannelEventDispatcher(channel);
+
+        await pump.StartAsync(TestContext.Current.CancellationToken);
+        await dispatcher.Publish(new Pinged("hi"), TestContext.Current.CancellationToken);
+
+        var waited = Stopwatch.StartNew();
+        while (Interlocked.Read(ref processed) < 1 && waited.Elapsed < TimeSpan.FromSeconds(5))
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        await pump.StopAsync(TestContext.Current.CancellationToken);
+
+        Interlocked.Read(ref processed).ShouldBe(1);
     }
 }

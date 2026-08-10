@@ -28,6 +28,9 @@ internal sealed class EventPump(
 
     private async Task Dispatch(EventEnvelope envelope)
     {
+        var startedAt = Stopwatch.GetTimestamp();
+        var tag = new KeyValuePair<string, object?>("event.type", envelope.EventType);
+
         // Linked to the publish-time context, so this span joins the request's trace.
         using var activity = diagnostics.ActivitySource.StartActivity(
             $"integration-event {envelope.EventType}", ActivityKind.Consumer, envelope.ParentContext);
@@ -35,11 +38,17 @@ internal sealed class EventPump(
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             await envelope.Dispatch(scope.ServiceProvider, CancellationToken.None);
+            diagnostics.EventsProcessed.Add(1, tag);
         }
         catch (Exception ex)
         {
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            diagnostics.EventsFailed.Add(1, tag);
             logger.LogError(ex, "Dispatch failed for {EventType}", envelope.EventType);
+        }
+        finally
+        {
+            diagnostics.DispatchDuration.Record(Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds, tag);
         }
     }
 }
