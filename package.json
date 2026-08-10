@@ -1,0 +1,11 @@
+{
+  "name": "jig-tooling",
+  "private": true,
+  "description": "Bun tooling for the Jig repo: OpenAPI-to-TypeScript client codegen.",
+  "scripts": {
+    "codegen": "bun run tools/codegen/generate-client.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14"
+  }
+}

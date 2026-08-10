@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "types": ["bun"],
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["tools/**/*.ts", "clients/**/*.ts"]
+}
