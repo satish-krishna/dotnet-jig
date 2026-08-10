@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading.Channels;
 using Jig.Host.Runtime;
 using Jig.SharedKernel;
@@ -23,6 +24,9 @@ public class EventPumpTests
         }
     }
 
+    private static EventPump NewPump(Channel<EventEnvelope> channel, IServiceProvider services, JigDiagnostics diagnostics)
+        => new(channel, services.GetRequiredService<IServiceScopeFactory>(), diagnostics, NullLogger<EventPump>.Instance);
+
     [Fact]
     public async Task Pump_runs_the_handler_off_the_publishing_thread()
     {
@@ -31,7 +35,8 @@ public class EventPumpTests
             .AddSingleton<IIntegrationEventHandler<Pinged>>(recorder)
             .BuildServiceProvider();
         var channel = Channel.CreateBounded<EventEnvelope>(8);
-        var pump = new EventPump(channel, services.GetRequiredService<IServiceScopeFactory>(), NullLogger<EventPump>.Instance);
+        using var diagnostics = new JigDiagnostics();
+        var pump = NewPump(channel, services, diagnostics);
         IEventDispatcher dispatcher = new ChannelEventDispatcher(channel);
 
         await pump.StartAsync(TestContext.Current.CancellationToken);
@@ -40,5 +45,36 @@ public class EventPumpTests
         await pump.StopAsync(TestContext.Current.CancellationToken);
 
         recorder.Seen.ShouldHaveSingleItem().ShouldBe("hi");
+    }
+
+    [Fact]
+    public async Task Worker_span_joins_the_publish_time_trace()
+    {
+        var spans = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = s => s.Name == JigDiagnostics.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = spans.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var requestTraceId = ActivityTraceId.CreateRandom();
+        var parent = new ActivityContext(requestTraceId, ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded);
+
+        var recorder = new Recorder();
+        var services = new ServiceCollection().BuildServiceProvider();
+        var channel = Channel.CreateBounded<EventEnvelope>(8);
+        using var diagnostics = new JigDiagnostics();
+        var pump = NewPump(channel, services, diagnostics);
+
+        await pump.StartAsync(TestContext.Current.CancellationToken);
+        await channel.Writer.WriteAsync(
+            new EventEnvelope(nameof(Pinged), parent, (_, c) => recorder.Handle(new Pinged("hi"), c)),
+            TestContext.Current.CancellationToken);
+        await recorder.Signal.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await pump.StopAsync(TestContext.Current.CancellationToken);
+
+        spans.ShouldHaveSingleItem().TraceId.ShouldBe(requestTraceId);
     }
 }

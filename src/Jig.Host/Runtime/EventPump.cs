@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading.Channels;
 using Jig.SharedKernel;
 
@@ -9,6 +10,7 @@ namespace Jig.Host.Runtime;
 internal sealed class EventPump(
     Channel<EventEnvelope> channel,
     IServiceScopeFactory scopeFactory,
+    JigDiagnostics diagnostics,
     ILogger<EventPump> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -26,6 +28,9 @@ internal sealed class EventPump(
 
     private async Task Dispatch(EventEnvelope envelope)
     {
+        // Linked to the publish-time context, so this span joins the request's trace.
+        using var activity = diagnostics.ActivitySource.StartActivity(
+            $"integration-event {envelope.EventType}", ActivityKind.Consumer, envelope.ParentContext);
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
@@ -33,6 +38,7 @@ internal sealed class EventPump(
         }
         catch (Exception ex)
         {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             logger.LogError(ex, "Dispatch failed for {EventType}", envelope.EventType);
         }
     }

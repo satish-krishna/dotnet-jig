@@ -5,6 +5,10 @@ using Jig.Host;
 using Jig.Host.Runtime;
 using Jig.SharedKernel;
 using Jig.Web;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,7 +28,25 @@ var eventChannel = Channel.CreateBounded<EventEnvelope>(new BoundedChannelOption
 });
 builder.Services.AddSingleton(eventChannel);
 builder.Services.AddSingleton<IEventDispatcher, ChannelEventDispatcher>();
+builder.Services.AddSingleton<JigDiagnostics>();
 builder.Services.AddHostedService<EventPump>();
+
+// The stripped host wires no telemetry, so this adds the pipeline the request and the worker
+// both feed. OTLP export is added only when an endpoint is configured, so tests stay quiet and
+// the compose rig (which sets OTEL_EXPORTER_OTLP_ENDPOINT) ships traces to the Aspire Dashboard.
+var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("Jig"))
+    .WithTracing(t =>
+    {
+        t.AddSource(JigDiagnostics.SourceName).AddAspNetCoreInstrumentation();
+        if (otlpEndpoint is not null) t.AddOtlpExporter();
+    })
+    .WithMetrics(m =>
+    {
+        m.AddMeter(JigDiagnostics.SourceName).AddAspNetCoreInstrumentation();
+        if (otlpEndpoint is not null) m.AddOtlpExporter();
+    });
 
 var moduleAssemblies = ModuleDiscovery.DiscoverAndRegister(builder.Services);
 
