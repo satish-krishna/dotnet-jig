@@ -118,7 +118,11 @@ builder.Services.AddHealthChecks()
 // production set Authority to a real IdP and drop DevSigningKey; the handler then validates
 // against the IdP's published keys instead of the symmetric dev key.
 builder.Services.AddOptions<SecurityOptions>()
-    .BindConfiguration("Security").ValidateDataAnnotations().ValidateOnStart();
+    .BindConfiguration("Security")
+    .ValidateDataAnnotations()
+    .Validate(o => !string.IsNullOrWhiteSpace(o.Authority) || o.DevSigningKey.Length >= 32,
+        "Security: set Authority for production, or a DevSigningKey of at least 32 characters for the template.")
+    .ValidateOnStart();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
@@ -129,14 +133,24 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
     {
         var sec = secOptions.Value;
         jwt.MapInboundClaims = false;
-        if (!string.IsNullOrWhiteSpace(sec.Authority)) jwt.Authority = sec.Authority;
         jwt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidIssuer = sec.Issuer,
             ValidAudience = sec.Audience,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(sec.DevSigningKey)),
         };
+        if (!string.IsNullOrWhiteSpace(sec.Authority))
+        {
+            // Production: validate against the IdP's published keys. The dev key is never a signer
+            // here, so a dev key committed to config cannot forge a token in a real deployment.
+            jwt.Authority = sec.Authority;
+        }
+        else
+        {
+            // Template/dev: no IdP, so validate the symmetric dev key.
+            jwt.TokenValidationParameters.ValidateIssuerSigningKey = true;
+            jwt.TokenValidationParameters.IssuerSigningKey =
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(sec.DevSigningKey));
+        }
         // A bare 401 with an empty body would contradict every other error being ProblemDetails
         // since Part 3, so write ProblemDetails on the challenge instead.
         jwt.Events = new JwtBearerEvents
@@ -170,6 +184,9 @@ builder.Services.AddAuthorization(o =>
     // same policy admits a person's token or a machine's API key without knowing which authenticated.
     o.AddPolicy("users:read", p => p.RequireAuthenticatedUser().RequireClaim("scope", "users:read"));
     o.AddPolicy("users:write", p => p.RequireAuthenticatedUser().RequireClaim("scope", "users:write"));
+    // Reading one record is owner-or-admin; enumerating everyone is admin-only, so the list route
+    // cannot be used to sidestep the per-record ownership rule.
+    o.AddPolicy("admin", p => p.RequireAuthenticatedUser().RequireClaim("scope", "admin"));
 });
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProblemDetailsAuthResultHandler>();
 

@@ -11,7 +11,10 @@ internal sealed class SecurityOptions
     [Required] public string Issuer { get; set; } = "";
     [Required] public string Audience { get; set; } = "";
     public string? Authority { get; set; }
-    [Required, MinLength(32)] public string DevSigningKey { get; set; } = "";
+    // Used as a signing key only when Authority is unset (the template path). In production you set
+    // Authority and leave this empty, so it can never sign a token there. The one-of rule that keeps
+    // one of the two present lives in Program.cs, not as [Required], precisely so it can be empty.
+    public string DevSigningKey { get; set; } = "";
     public Dictionary<string, ApiKeyOptions> ApiKeys { get; set; } = new();
 }
 

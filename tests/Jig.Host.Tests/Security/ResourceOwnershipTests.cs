@@ -32,6 +32,7 @@ public class ResourceOwnershipTests
         var res = await client.GetAsync($"/v1/users/{id}", TestContext.Current.CancellationToken);
 
         res.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        res.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
     }
 
     [Fact]

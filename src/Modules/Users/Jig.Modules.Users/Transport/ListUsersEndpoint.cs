@@ -9,7 +9,7 @@ internal sealed class ListUsersEndpoint(UserService users)
     public override void Configure()
     {
         Get("/users");
-        Policies("users:read");
+        Policies("admin");
     }
 
     public override async Task HandleAsync(CancellationToken ct)
