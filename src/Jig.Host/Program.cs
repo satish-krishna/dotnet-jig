@@ -18,6 +18,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authorization;
 using Jig.Host.Security;
 using SecurityOptions = Jig.Host.Security.SecurityOptions;
 
@@ -134,9 +135,26 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(sec.DevSigningKey)),
         };
+        // A bare 401 with an empty body would contradict every other error being ProblemDetails
+        // since Part 3, so write ProblemDetails on the challenge instead.
+        jwt.Events = new JwtBearerEvents
+        {
+            OnChallenge = async ctx =>
+            {
+                ctx.HandleResponse();
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                var problems = ctx.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+                await problems.WriteAsync(new ProblemDetailsContext
+                {
+                    HttpContext = ctx.HttpContext,
+                    ProblemDetails = { Status = StatusCodes.Status401Unauthorized, Title = "Unauthorized" },
+                });
+            },
+        };
     });
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
 builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProblemDetailsAuthResultHandler>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<FallbackExceptionHandler>();
