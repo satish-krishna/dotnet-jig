@@ -10,6 +10,8 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
+using Serilog;
+using Serilog.Sinks.OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +49,30 @@ builder.Services.AddOpenTelemetry()
         m.AddMeter(JigDiagnostics.SourceName).AddAspNetCoreInstrumentation();
         if (otlpEndpoint is not null) m.AddOtlpExporter();
     });
+
+// Traces and metrics ride the OpenTelemetry listener above. Logs go through Serilog behind
+// ILogger, because that is what Serilog is still for once the box produces the records: enrichment
+// and, above all, sinks, which are pure configuration. The sinks sit behind an async buffer so a
+// slow one never blocks the request thread (the same reason the welcome moved off it), and the
+// buffer flushes on shutdown. Console always; the OTLP sink when an endpoint is set, so a log line
+// lands in the same backend as its trace (the Aspire Dashboard here, Azure Monitor or Seq in
+// production, which is one more WriteTo line, not a code change).
+builder.Host.UseSerilog((_, sp, cfg) =>
+{
+    cfg.ReadFrom.Services(sp)
+       .Enrich.FromLogContext()
+       .WriteTo.Async(sink =>
+       {
+           sink.Console();
+           if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+               sink.OpenTelemetry(o =>
+               {
+                   o.Endpoint = otlpEndpoint;
+                   o.Protocol = OtlpProtocol.Grpc;
+                   o.ResourceAttributes = new Dictionary<string, object> { ["service.name"] = "Jig" };
+               });
+       });
+});
 
 var moduleAssemblies = ModuleDiscovery.DiscoverAndRegister(builder.Services);
 
