@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Jig.Host.Tests.Security;
 
 namespace Jig.Host.Tests;
 
@@ -20,6 +21,9 @@ internal sealed class JigApiFactory : WebApplicationFactory<Program>
                 // Force telemetry export off regardless of any ambient OTEL endpoint on the box,
                 // so booting the host in a test never attaches a real OTLP exporter.
                 ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",
+                ["Security:Issuer"] = DevTokens.Issuer,
+                ["Security:Audience"] = DevTokens.Audience,
+                ["Security:DevSigningKey"] = DevTokens.Key,
             }));
     }
 

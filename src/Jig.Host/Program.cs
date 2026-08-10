@@ -14,6 +14,12 @@ using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Sinks.OpenTelemetry;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
+using Jig.Host.Security;
+using SecurityOptions = Jig.Host.Security.SecurityOptions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -106,11 +112,39 @@ builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
     .AddCheck<ReadinessHealthCheck>("ready", tags: ["ready"]);
 
+// Security. Validate-only: the app validates tokens and never issues production ones. In
+// production set Authority to a real IdP and drop DevSigningKey; the handler then validates
+// against the IdP's published keys instead of the symmetric dev key.
+builder.Services.AddOptions<SecurityOptions>()
+    .BindConfiguration("Security").ValidateDataAnnotations().ValidateOnStart();
+builder.Services.AddHttpContextAccessor();
+
+// Configured from the bound options rather than an eager Configuration read, so a config override
+// (a test host, an env var) is honored: the options system builds SecurityOptions from final config.
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<SecurityOptions>>((jwt, secOptions) =>
+    {
+        var sec = secOptions.Value;
+        jwt.MapInboundClaims = false;
+        if (!string.IsNullOrWhiteSpace(sec.Authority)) jwt.Authority = sec.Authority;
+        jwt.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = sec.Issuer,
+            ValidAudience = sec.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(sec.DevSigningKey)),
+        };
+    });
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+builder.Services.AddAuthorization();
+
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<FallbackExceptionHandler>();
 
 var app = builder.Build();
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseFastEndpoints(c =>
 {
     c.Endpoints.RoutePrefix = "v1";

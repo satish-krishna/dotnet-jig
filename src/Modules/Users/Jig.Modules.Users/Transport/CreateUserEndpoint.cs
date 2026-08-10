@@ -9,7 +9,7 @@ internal sealed class CreateUserEndpoint(UserService users)
     public override void Configure()
     {
         Post("/users");
-        AllowAnonymous();
+        // FastEndpoints requires an authenticated caller by default; Task 4 adds the scope policy.
     }
 
     public override async Task HandleAsync(CreateUserRequest req, CancellationToken ct)
