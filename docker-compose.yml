@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Point OpenTelemetry at the Aspire Dashboard's OTLP endpoint. Program.cs adds the OTLP
+      # exporter only when this is set, so traces and metrics flow here under compose.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://dashboard:18889
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      # A writable SQLite path for the non-root app user.
+      Persistence__ConnectionString: Data Source=/tmp/jig.db
+    depends_on:
+      - dashboard
+
+  dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    ports:
+      - "18888:18888"   # dashboard UI
+    environment:
+      DASHBOARD__FRONTEND__AUTHMODE: Unsecured
