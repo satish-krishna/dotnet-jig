@@ -35,6 +35,11 @@ builder.Services.AddSingleton<IEventDispatcher, ChannelEventDispatcher>();
 builder.Services.AddSingleton<JigDiagnostics>();
 builder.Services.AddHostedService<EventPump>();
 
+// Give shutdown room to drain in-flight HTTP and the pump's buffered events, and close the
+// readiness gate the instant shutdown starts so no new traffic arrives during the drain.
+builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHostedService<ShutdownReadiness>();
+
 // The stripped host wires no telemetry, so this adds the pipeline the request and the worker
 // both feed. OTLP export is added only when an endpoint is configured, so tests stay quiet and
 // the compose rig (which sets OTEL_EXPORTER_OTLP_ENDPOINT) ships traces to the Aspire Dashboard.

@@ -22,8 +22,13 @@ internal sealed class EventPump(
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            // Normal shutdown. Task 6 adds draining of whatever is still buffered.
+            // Shutdown requested. Fall through and drain what is already buffered.
         }
+
+        // Drain events enqueued before shutdown so a rolling deploy does not drop them. The host
+        // ShutdownTimeout caps how long this may take before the process is forced down.
+        while (channel.Reader.TryRead(out var envelope))
+            await Dispatch(envelope);
     }
 
     private async Task Dispatch(EventEnvelope envelope)
