@@ -5,6 +5,8 @@ using Jig.Host;
 using Jig.Host.Runtime;
 using Jig.SharedKernel;
 using Jig.Web;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -92,6 +94,13 @@ builder.Services.AddFastEndpoints(o =>
     };
 });
 
+// Liveness answers "is the process up"; readiness answers "should traffic come here right now".
+// They differ during shutdown: still live, but not ready. See ReadinessGate.
+builder.Services.AddSingleton<ReadinessGate>();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"])
+    .AddCheck<ReadinessHealthCheck>("ready", tags: ["ready"]);
+
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<FallbackExceptionHandler>();
 
@@ -104,6 +113,10 @@ app.UseFastEndpoints(c =>
 });
 app.UseSwaggerGen();
 app.MapScalarApiReference(o => o.WithOpenApiRoutePattern("/swagger/v1/swagger.json"));
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") });
+
 app.Run();
 
 // Exposed so the integration tests can drive the host through WebApplicationFactory.
