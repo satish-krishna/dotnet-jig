@@ -10,6 +10,10 @@ services:
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       # A writable SQLite path for the non-root app user.
       Persistence__ConnectionString: Data Source=/tmp/jig.db
+      # A demo machine key so the observability walk is one curl. Local rig only.
+      Security__ApiKeys__demo-key__Subject: "00000000-0000-0000-0000-000000000001"
+      Security__ApiKeys__demo-key__Scopes__0: "users:write"
+      Security__ApiKeys__demo-key__Scopes__1: "users:read"
     depends_on:
       - dashboard
 

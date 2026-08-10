@@ -12,10 +12,10 @@ That starts two containers: the Jig API on `http://localhost:8080`, and the stan
 
 ## Watch one trace cross the channel
 
-Register a user:
+Register a user. Since Part 7 the endpoint requires auth, so the compose file ships a demo machine key (`demo-key`) to keep this a single curl; a real deployment would send a bearer token from an identity provider instead.
 
 ```
-curl -i -X POST http://localhost:8080/v1/users -H "content-type: application/json" -d "{\"name\":\"Ada\",\"email\":\"ada@example.com\"}"
+curl -i -X POST http://localhost:8080/v1/users -H "X-Api-Key: demo-key" -H "content-type: application/json" -d "{\"name\":\"Ada\",\"email\":\"ada@example.com\"}"
 ```
 
 Open the dashboard at `http://localhost:18888` and find the trace for that request. The point is the shape of it: the HTTP span for `POST /v1/users` and a separate `integration-event UserRegistered` span sit under one trace id, even though the second one runs on the background worker, not the request thread. That is the captured trace context doing its job across the hand-off.
