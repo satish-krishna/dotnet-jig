@@ -24,6 +24,9 @@ internal sealed class JigApiFactory : WebApplicationFactory<Program>
                 ["Security:Issuer"] = DevTokens.Issuer,
                 ["Security:Audience"] = DevTokens.Audience,
                 ["Security:DevSigningKey"] = DevTokens.Key,
+                ["Security:ApiKeys:test-machine-key:Subject"] = "22222222-2222-2222-2222-222222222222",
+                ["Security:ApiKeys:test-machine-key:Scopes:0"] = "users:write",
+                ["Security:ApiKeys:test-machine-key:Scopes:1"] = "users:read",
             }));
     }
 

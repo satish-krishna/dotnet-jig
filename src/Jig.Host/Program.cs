@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 using Jig.Host.Security;
 using SecurityOptions = Jig.Host.Security.SecurityOptions;
 
@@ -153,7 +154,16 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
             },
         };
     });
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+// A forwarding scheme picks the concrete scheme by what the request carries: an API key header
+// routes to the API-key handler, anything else to bearer. Both land in the same policies below.
+builder.Services.AddAuthentication("Jig")
+    .AddPolicyScheme("Jig", "Bearer or ApiKey", o =>
+        o.ForwardDefaultSelector = ctx =>
+            ctx.Request.Headers.ContainsKey(ApiKeyAuthHandler.HeaderName)
+                ? ApiKeyAuthHandler.SchemeName
+                : JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer()
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthHandler>(ApiKeyAuthHandler.SchemeName, null);
 builder.Services.AddAuthorization(o =>
 {
     // Defined once, applied at the endpoint. A scope is a claim either scheme can carry, so the
