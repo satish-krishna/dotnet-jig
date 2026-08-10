@@ -154,7 +154,13 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
         };
     });
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(o =>
+{
+    // Defined once, applied at the endpoint. A scope is a claim either scheme can carry, so the
+    // same policy admits a person's token or a machine's API key without knowing which authenticated.
+    o.AddPolicy("users:read", p => p.RequireAuthenticatedUser().RequireClaim("scope", "users:read"));
+    o.AddPolicy("users:write", p => p.RequireAuthenticatedUser().RequireClaim("scope", "users:write"));
+});
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProblemDetailsAuthResultHandler>();
 
 builder.Services.AddProblemDetails();

@@ -10,7 +10,7 @@ internal sealed class GetUserEndpoint(UserService users)
     public override void Configure()
     {
         Get("/users/{id}");
-        AllowAnonymous();
+        Policies("users:read");
     }
 
     public override async Task HandleAsync(GetUserRequest req, CancellationToken ct)
