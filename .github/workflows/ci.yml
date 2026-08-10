@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore
+      # build runs the Roslyn analyzers, so a layer or cross-module violation fails here.
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test --no-build --configuration Release
+
+  codegen-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: oven-sh/setup-bun@v2
+      - run: dotnet build --configuration Release
+      - run: bun install --frozen-lockfile
+      # Regenerate the client from the running app and fail if it differs from what is committed,
+      # so the wire contracts cannot drift from the API without the merge going red.
+      - run: bun run codegen
+      - run: git diff --exit-code clients/typescript/api.ts tools/codegen/openapi.json
+
+  commit-lint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - run: bunx --bun commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.sha }}
