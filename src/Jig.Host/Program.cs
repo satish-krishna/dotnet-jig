@@ -208,6 +208,11 @@ app.MapScalarApiReference(o => o.WithOpenApiRoutePattern("/swagger/v1/swagger.js
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") });
 
+// The fourth probe in the family: /health answers "is it up", /version answers "which build is up".
+// Unauthenticated and outside the versioned API on purpose, so a deploy check or a QA report reads
+// it the same trivial way it reads /health, and can pin a hotfix to the exact commit that is live.
+app.MapGet("/version", () => BuildInfo.Current);
+
 app.MapDevTokenEndpoint();
 
 app.Run();
