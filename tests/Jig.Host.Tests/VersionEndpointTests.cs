@@ -23,4 +23,17 @@ public class VersionEndpointTests
         body.Version.ShouldNotBeNullOrWhiteSpace();
         body.Sha.ShouldNotBeNullOrWhiteSpace();
     }
+
+    [Fact]
+    public async Task Version_is_not_advertised_in_the_api_document()
+    {
+        await using var factory = new JigApiFactory();
+        var client = factory.CreateClient();
+
+        // It is an internal endpoint: a gateway publishes only the versioned routes, and the
+        // generated client is built from this document, so /version must never appear in it.
+        var doc = await client.GetStringAsync("/swagger/v1/swagger.json", TestContext.Current.CancellationToken);
+
+        doc.ShouldNotContain("/version");
+    }
 }
