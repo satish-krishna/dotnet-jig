@@ -123,9 +123,10 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = r => r.
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") });
 
 // The fourth probe in the family: /health answers "is it up", /version answers "which build is up".
-// Unauthenticated and outside the versioned API on purpose, so a deploy check or a QA report reads
-// it the same trivial way it reads /health, and can pin a hotfix to the exact commit that is live.
-app.MapGet("/version", () => BuildInfo.Current);
+// An internal endpoint: a gateway publishes only the versioned routes, so this never faces the
+// internet, and ExcludeFromDescription keeps it out of the OpenAPI doc (and the client generated
+// from it), so it stays a thing you curl on the box, not a thing the API advertises.
+app.MapGet("/version", () => BuildInfo.Current).ExcludeFromDescription();
 
 app.Run();
 
