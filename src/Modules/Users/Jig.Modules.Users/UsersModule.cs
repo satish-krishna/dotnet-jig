@@ -7,7 +7,6 @@ using Jig.Modules.Users.Infrastructure.Mongo;
 using Jig.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -30,7 +29,7 @@ internal sealed class UsersModule : IModule
 
         // Mongo side. The client and collection are thread-safe, long-lived handles (the driver's
         // own guidance), so they are singletons; MongoUserStore itself stays scoped for parity
-        // with EfUserStore and so it composes the same way behind the decorator below.
+        // with EfUserStore.
         services.AddSingleton<IMongoClient>(sp =>
             new MongoClient(sp.GetRequiredService<IOptions<PersistenceOptions>>().Value.ConnectionString));
         services.AddSingleton(sp =>
@@ -48,10 +47,9 @@ internal sealed class UsersModule : IModule
         services.AddScoped<IUserStore>(sp =>
         {
             var opts = sp.GetRequiredService<IOptions<PersistenceOptions>>().Value;
-            IUserStore inner = opts.Provider == "Mongo"
+            return opts.Provider == "Mongo"
                 ? sp.GetRequiredService<MongoUserStore>()
                 : sp.GetRequiredService<EfUserStore>();
-            return new LoggingUserStore(inner, sp.GetRequiredService<ILogger<LoggingUserStore>>());
         });
 
         // Scoped, not singleton: both depend on the now-scoped IUserStore, and a real store
