@@ -13,18 +13,15 @@ namespace Jig.Modules.Users.Infrastructure.Mongo;
 /// race in the use-case is closed the same way in both worlds.</summary>
 internal sealed class MongoUserStore(IMongoCollection<UserDocument> users) : IUserStore
 {
-    /// <summary>The case-insensitive uniqueness rule, enforced by the database rather than only
-    /// by a check in the use-case. Collation strength 2 makes "Ada@x.com" and "ada@x.com" collide,
-    /// so this index is what makes the check-then-act race harmless: the second writer loses
-    /// here. Called once at startup (or by a test before it starts asserting), not per-request.</summary>
+    /// <summary>The uniqueness rule, enforced by the database rather than only by a check in the
+    /// use-case. NormalizedEmail is already folded by the domain, so this is a plain unique
+    /// index: no collation is needed, and this index is what makes the check-then-act race
+    /// harmless, the second writer loses here. Called once at startup (or by a test before it
+    /// starts asserting), not per-request.</summary>
     public static async Task EnsureIndexes(IMongoCollection<UserDocument> collection, CancellationToken ct)
     {
-        var keys = Builders<UserDocument>.IndexKeys.Ascending(u => u.Email);
-        var options = new CreateIndexOptions<UserDocument>
-        {
-            Unique = true,
-            Collation = new Collation("en", strength: CollationStrength.Secondary),
-        };
+        var keys = Builders<UserDocument>.IndexKeys.Ascending(u => u.NormalizedEmail);
+        var options = new CreateIndexOptions<UserDocument> { Unique = true };
 
         await collection.Indexes.CreateOneAsync(new CreateIndexModel<UserDocument>(keys, options), cancellationToken: ct);
     }
@@ -47,12 +44,11 @@ internal sealed class MongoUserStore(IMongoCollection<UserDocument> users) : IUs
 
     public async Task<User?> FindByEmail(string email, CancellationToken ct)
     {
-        // The equality filter needs the same case-insensitive collation the unique index was
-        // built with; otherwise Mongo's default binary comparison would miss "Ada@x.com" when
-        // asked for "ada@x.com".
-        var options = new FindOptions<UserDocument, UserDocument> { Collation = new Collation("en", strength: CollationStrength.Secondary) };
-        using var cursor = await users.FindAsync(u => u.Email == email, options, ct);
-        var document = await cursor.SingleOrDefaultAsync(ct);
+        // The domain folds email once; the filter is against that already-normalized value,
+        // so no collation is needed for Mongo's default binary comparison to match
+        // "Ada@x.com" when asked for "ada@x.com".
+        var normalized = User.Normalize(email);
+        var document = await users.Find(u => u.NormalizedEmail == normalized).SingleOrDefaultAsync(ct);
         return document?.ToDomain();
     }
 

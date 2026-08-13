@@ -16,9 +16,13 @@ internal sealed class EfUserStore(JigDbContext db) : IUserStore
         => await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, ct);
 
     public async Task<User?> FindByEmail(string email, CancellationToken ct)
-        // The Email column is TEXT COLLATE NOCASE, so this equality comparison is already
-        // case-insensitive at the database: "Ada@x.com" and "ada@x.com" match the same row.
-        => await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Email == email, ct);
+    {
+        // The domain folds email once; the comparison is against that already-normalized
+        // value, so no database-side collation is needed to make "Ada@x.com" and
+        // "ada@x.com" match the same row.
+        var normalized = User.Normalize(email);
+        return await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.NormalizedEmail == normalized, ct);
+    }
 
     public async Task<Result<User>> Add(User user, CancellationToken ct)
     {
@@ -31,8 +35,8 @@ internal sealed class EfUserStore(JigDbContext db) : IUserStore
         }
         catch (DbUpdateException)
         {
-            // The only unique constraint on this table is the case-insensitive index on Email,
-            // so a DbUpdateException here means a duplicate email raced past whatever check the
+            // The only unique constraint on this table is the index on NormalizedEmail, so a
+            // DbUpdateException here means a duplicate email raced past whatever check the
             // caller may have made. The database is the single arbiter, not a pre-check upstream.
             return Error.Conflict($"Email {user.Email} is already in use.");
         }

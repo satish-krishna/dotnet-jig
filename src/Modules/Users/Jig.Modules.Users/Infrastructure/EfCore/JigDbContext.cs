@@ -27,14 +27,12 @@ internal sealed class JigDbContext(DbContextOptions<JigDbContext> options) : DbC
 
         user.Property(u => u.Name).IsRequired().HasMaxLength(200);
 
-        user.Property(u => u.Email)
-            .IsRequired()
-            .HasMaxLength(320)
-            .HasColumnType("TEXT COLLATE NOCASE");
+        user.Property(u => u.Email).IsRequired().HasMaxLength(320);
+        user.Property(u => u.NormalizedEmail).IsRequired().HasMaxLength(320);
 
         // The uniqueness rule, enforced by the database rather than only by the check in the
-        // use-case. NOCASE makes "Ada@x.com" and "ada@x.com" collide, so the index is what
-        // makes the check-then-act race harmless: the second writer loses here.
-        user.HasIndex(u => u.Email).IsUnique();
+        // use-case. NormalizedEmail is already folded by the domain, so this is a plain unique
+        // index: no collation is needed, and the second writer loses here.
+        user.HasIndex(u => u.NormalizedEmail).IsUnique();
     }
 }
