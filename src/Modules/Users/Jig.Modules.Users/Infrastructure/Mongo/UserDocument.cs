@@ -26,6 +26,9 @@ internal sealed class UserDocument
     [BsonElement("email")]
     public string Email { get; set; } = string.Empty;
 
+    [BsonElement("normalized_email")]
+    public string NormalizedEmail { get; set; } = "";
+
     public User ToDomain() => new(new PseudoKey(Id), Name, Email);
 
     public static UserDocument From(User user) => new()
@@ -33,5 +36,6 @@ internal sealed class UserDocument
         Id = user.Id.Value,
         Name = user.Name,
         Email = user.Email,
+        NormalizedEmail = user.NormalizedEmail,
     };
 }
